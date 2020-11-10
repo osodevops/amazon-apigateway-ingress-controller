@@ -1,0 +1,44 @@
+name: Master, build and deploy changes to production ECR
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  release_build_push_apigateway_controller:
+    runs-on: ubuntu-latest
+    name: Build apigateway ingress controller Docker image and push to ECR
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+        with:
+          fetch-depth: '0'
+        
+      - name: Bump version and push tag
+        id: tagging
+        if: contains(github.ref, 'master')
+        uses: anothrNick/github-tag-action@1.21.0
+        env:
+          DEFAULT_BUMP: patch
+          INITIAL_VERSION: 1.5.0
+          RELEASE_BRANCHES: master
+
+      - name: Build Docker image and Push to ECR
+        uses: kciter/aws-ecr-action@v1
+        env:
+          repo: apigateway-ingress-controller
+          INSTANCE_ROLE_ARNS: arn:aws:iam::670824338614:role/eksctl-detected-dev-addon-iamserviceaccount-Role1-VLGK8YYTL07D
+          IMG: apigateway-ingress-controller
+          IAMROLEARN: arn:aws:iam::670824338614:role/eksctl-detected-dev-addon-iamserviceaccount-Role1-VLGK8YYTL07D
+        with:
+          access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          account_id: 670824338614
+          dockerfile: ./Dockerfile
+          path: ./
+          # extra_build_args:
+          repo: ${{ env.repo }}
+          region: eu-west-2
+          tags: 1.6.0
+          create_repo: false
